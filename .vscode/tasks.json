@@ -1,0 +1,81 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "backend: install",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "frontend: install",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "backend: migrate",
+      "type": "shell",
+      "command": "npx",
+      "args": ["prisma", "migrate", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "docker: up",
+      "type": "shell",
+      "command": "docker-compose",
+      "args": ["up"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*$",
+          "file": 1,
+          "location": 2
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Creating.*",
+          "endsPattern": "^.*healthy|started.*$"
+        }
+      }
+    },
+    {
+      "label": "docker: down",
+      "type": "shell",
+      "command": "docker-compose",
+      "args": ["down"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "silent"
+      }
+    }
+  ]
+}
