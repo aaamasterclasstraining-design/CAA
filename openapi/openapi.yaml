@@ -1,0 +1,427 @@
+openapi: 3.1.0
+info:
+  title: CAT Operating Portal API
+  version: 1.0.0
+  description: >
+    Enforced operating system API for the Center for Advanced Techniques (CAT).
+    Manages cases, modules, compliance forms, SOP execution, and incident reporting.
+  contact:
+    name: CAT Operating Portal
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3001
+    description: Development server
+  - url: https://api.cat-portal.com
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication token
+
+  schemas:
+    User:
+      type: object
+      required: [id, email, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, operator, supervisor]
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Case:
+      type: object
+      required: [id, caseNumber, currentModule, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        caseNumber:
+          type: string
+          description: Unique case identifier
+        currentModule:
+          type: string
+          enum: [M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12]
+        status:
+          type: string
+          enum: [active, paused, completed, archived]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Module:
+      type: object
+      required: [id, name, order]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        order:
+          type: integer
+        description:
+          type: string
+        requiredForms:
+          type: array
+          items:
+            type: string
+        completion:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+    Incident:
+      type: object
+      required: [id, caseId, severity]
+      properties:
+        id:
+          type: string
+          format: uuid
+        caseId:
+          type: string
+          format: uuid
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, reviewed, resolved]
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLog:
+      type: object
+      required: [id, userId, action, timestamp]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+        changes:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required: [message, statusCode]
+      properties:
+        message:
+          type: string
+        statusCode:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+
+paths:
+  /auth/login:
+    post:
+      summary: User login
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+
+  /cases:
+    post:
+      summary: Create new case
+      tags: [Cases]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [caseNumber]
+              properties:
+                caseNumber:
+                  type: string
+      responses:
+        '201':
+          description: Case created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      summary: List all cases
+      tags: [Cases]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, completed, archived]
+        - name: skip
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: take
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Cases retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Case'
+                  total:
+                    type: integer
+
+  /cases/{id}:
+    get:
+      summary: Get case details
+      tags: [Cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Case retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cases/{id}/advance:
+    post:
+      summary: Advance case to next module
+      tags: [Cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Case advanced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '403':
+          description: Hard stop - missing forms or compliance violations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  violations:
+                    type: array
+                    items:
+                      type: string
+
+  /modules:
+    get:
+      summary: List all modules
+      tags: [Modules]
+      responses:
+        '200':
+          description: Modules retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Module'
+
+  /incidents:
+    post:
+      summary: Report incident
+      tags: [Incidents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [caseId, severity]
+              properties:
+                caseId:
+                  type: string
+                  format: uuid
+                severity:
+                  type: string
+                  enum: [LOW, MEDIUM, HIGH, CRITICAL]
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Incident logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+
+    get:
+      summary: List incidents
+      tags: [Incidents]
+      parameters:
+        - name: caseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: severity
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Incidents retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Incident'
+
+  /audit:
+    post:
+      summary: Log audit action
+      tags: [Audit]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                resourceType:
+                  type: string
+                resourceId:
+                  type: string
+                changes:
+                  type: object
+      responses:
+        '201':
+          description: Audit logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLog'
+
+    get:
+      summary: List audit logs
+      tags: [Audit]
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit logs retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLog'
+
+components:
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

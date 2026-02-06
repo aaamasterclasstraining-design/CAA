@@ -1,0 +1,63 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "Launch Chrome",
+            "request": "launch",
+            "type": "chrome",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}"
+        },
+        {
+            "name": "Backend (NestJS Debug)",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/node_modules/.bin/nest",
+            "args": ["start", "--watch", "--debug"],
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "preLaunchTask": "backend: install"
+        },
+        {
+            "name": "Frontend (Next.js Dev)",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/frontend/node_modules/.bin/next",
+            "args": ["dev"],
+            "cwd": "${workspaceFolder}/frontend",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "preLaunchTask": "frontend: install"
+        },
+        {
+            "name": "Frontend (Chrome Debug)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/frontend",
+            "sourceMaps": true,
+            "skipFiles": ["<node_internals>/**"],
+            "pathMapping": {
+                "/": "${workspaceFolder}/frontend/",
+                "/_next": "${workspaceFolder}/frontend/.next/"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Stack (Backend + Frontend)",
+            "configurations": ["Backend (NestJS Debug)", "Frontend (Next.js Dev)"],
+            "stopAll": true
+        },
+        {
+            "name": "Full Stack + Browser Debug",
+            "configurations": ["Backend (NestJS Debug)", "Frontend (Next.js Dev)", "Frontend (Chrome Debug)"],
+            "stopAll": true
+        }
+    ]
+}
