@@ -1,0 +1,56 @@
+name: 'Mythos Code Reviewer'
+description: 'AI server code review checks for async safety, injection security, and resource cleanup'
+author: 'DevOps Team'
+
+inputs:
+  github-token:
+    description: 'GitHub API token'
+    required: true
+  critical-fail:
+    description: 'Fail PR if CRITICAL checklist items or detector findings are present'
+    default: 'true'
+  injection-patterns-file:
+    description: 'Path to injection patterns JSON'
+    default: '.github/actions/mythos-reviewer/lib/injection_patterns.json'
+  exclude-paths:
+    description: 'Comma-separated paths or glob suffixes to exclude (for example docs/,*.md)'
+    default: 'docs/,*.md'
+
+outputs:
+  review-passed:
+    description: 'Whether PR passed all checks'
+    value: ${{ steps.review.outputs.passed }}
+  critical-count:
+    description: 'Number of CRITICAL issues found'
+    value: ${{ steps.review.outputs.critical_count }}
+  high-count:
+    description: 'Number of HIGH issues found'
+    value: ${{ steps.review.outputs.high_count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Mythos Review
+      id: review
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        CRITICAL_FAIL: ${{ inputs.critical-fail }}
+        INJECTION_PATTERNS: ${{ inputs.injection-patterns-file }}
+        EXCLUDE_PATHS: ${{ inputs.exclude-paths }}
+      run: node .github/actions/mythos-reviewer/main.js
+
+    - name: Comment on PR
+      if: always() && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        COMMENT_BODY: ${{ steps.review.outputs.comment_body }}
+      run: node .github/actions/mythos-reviewer/scripts/post-comment.js
+
+    - name: Fail if critical issues
+      if: inputs.critical-fail == 'true' && steps.review.outputs.critical_count > 0
+      shell: bash
+      run: |
+        echo "❌ CRITICAL checklist items or detector findings require review."
+        exit 1

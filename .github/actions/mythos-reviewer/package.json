@@ -1,0 +1,13 @@
+{
+  "name": "mythos-code-reviewer",
+  "version": "1.0.0",
+  "description": "Mythos Code Review Skill for AI server pull requests",
+  "main": "main.js",
+  "scripts": {
+    "test": "node --test",
+    "lint": "node --check main.js && node --check lib/detectors.js && node --check lib/reporters.js && node --check lib/checklist.js && node --check scripts/post-comment.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

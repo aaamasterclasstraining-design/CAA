@@ -1,0 +1,5 @@
+[
+  { "pattern": "ignore\\s+(all\\s+)?previous\\s+instructions", "flags": "i" },
+  { "pattern": "system\\s*prompt", "flags": "i" },
+  { "pattern": "developer\\s+message", "flags": "i" }
+]
